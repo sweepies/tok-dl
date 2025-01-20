@@ -225,6 +225,8 @@ def read_input(input_file: TextIO):
     line = line.rstrip()
     if line.startswith(("#", "//", "--")):
       continue
+    if len(line.strip()) == 0:
+      continue
     if url_validator(line):
       urls.append(line)
     else:
