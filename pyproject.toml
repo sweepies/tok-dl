@@ -1,6 +1,6 @@
 [project]
 name = "tok-dl"
-version = "0.0.2"
+version = "0.0.3"
 authors = [{ name = "Sweepy", email = "git@sweepy.dev" }]
 description = "Tok-DL: A TikTok Downloader that actually works"
 readme = "README.md"
