@@ -65,7 +65,6 @@ def main(input_file, metadata_only, out, errors_file, no_cache):
 
   errors = open(errors_file, "w")
   cache = dbm.open(".tiktok_cache", "c")
-  cache.keys
 
   request_time = time.time()
   index = 0
