@@ -1,0 +1,8 @@
+# this post is invalid
+https://www.tiktokv.com/share/video/7366428272911109522
+
+# this post is a valid video post
+https://www.tiktokv.com/share/video/7461819411524078879
+
+# this post is a valid gallery post
+https://www.tiktokv.com/share/video/7452619935160782123
