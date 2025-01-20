@@ -4,12 +4,17 @@
 <p align="center">
   <img src="https://github.com/user-attachments/assets/9d57a8a9-18d2-4751-b573-466f57607840" />
 </p>
+<div align="center">
+
+[![PyPI version](https://badge.fury.io/py/tok-dl.svg?icon=si%3Apython)](https://badge.fury.io/py/tok-dl)
+
+</div>
 
 ## Features
 - Saves both video and gallery posts, including all of their metadata
 - Highest quality, no watermarks
 - Caches already-downloaded and unavailable posts to avoid fetching them again
-  
+
 ## Installation
 ```shell
 pip install tok-dl
