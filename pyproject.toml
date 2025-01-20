@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tok-dl"
+version = "0.0.1"
+authors = [{ name = "Sweepy", email = "git@sweepy.dev" }]
+description = "Tok-DL: A TikTok Downloader that actually works"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+license = "GPL-3.0-or-later"
+license-files = ["LICEN[CS]E*"]
+
+dependencies = ["requests", "click", "validators", "pause", "loguru"]
+
+keywords = ["tiktok", "downloader", "archiver"]
+
+[project.scripts]
+tok-dl = "tok-dl:main"
+
+[project.urls]
+Homepage = "https://github.com/sweepies/tok-dl"
+Repository = "https://github.com/sweepies/tok-dl.git"
+Issues = "https://github.com/sweepies/tok-dl/issues"
