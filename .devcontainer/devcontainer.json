@@ -10,8 +10,10 @@
       "settings": {
         "workbench.editor.showTabs": "single",
         "editor.tabSize": 2,
-        "editor.defaultFormatter": "charliermarsh.ruff",
-        "editor.formatOnSave": true
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        }
       }
     }
   },
