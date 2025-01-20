@@ -2,9 +2,12 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/"]
+
 [project]
 name = "tok-dl"
-version = "0.0.1"
+version = "0.0.2"
 authors = [{ name = "Sweepy", email = "git@sweepy.dev" }]
 description = "Tok-DL: A TikTok Downloader that actually works"
 readme = "README.md"
@@ -21,7 +24,7 @@ dependencies = ["requests", "click", "validators", "pause", "loguru"]
 keywords = ["tiktok", "downloader", "archiver"]
 
 [project.scripts]
-tok-dl = "tok-dl:main"
+tok-dl = "src.main:main"
 
 [project.urls]
 Homepage = "https://github.com/sweepies/tok-dl"

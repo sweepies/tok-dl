@@ -22,7 +22,7 @@ API_BASE_URL = "https://www.tikwm.com/api/"
 @click.option("-e", "--errors-file", type=click.Path(dir_okay=False, writable=True, path_type=Path), default="errors.log", help="File to save errors to. (default ./errors.log)")
 @click.option("--no-cache", is_flag=True, default=False, help="Bypass the bad URL cache.")
 @click.argument("input_file", type=click.File())
-def main(input_file: TextIO, metadata_only, out: Path, errors_file: Path, no_cache):
+def main(input_file, metadata_only, out, errors_file, no_cache):
     """TikTok Downloader"""
     
     logger.configure(handlers=[])
