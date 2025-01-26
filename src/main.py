@@ -1,7 +1,6 @@
 import dbm
 import json
 import shutil
-import subprocess
 import sys
 import time
 from json import JSONDecodeError
@@ -48,11 +47,6 @@ def main(input_file, metadata_only, out, errors_file, no_cache):
     sys.stderr,
     format="{time:HH:mm:ss} <level>{level}</level> <green>{extra}</green> <level>{message}</level>",
   )
-
-  if not metadata_only:
-    if not check_wget():
-      logger.critical("Could not locate wget binary. Install wget.")
-      return 1
 
   meta_dir = Path(out, "meta")
   if not meta_dir.exists():
@@ -106,7 +100,6 @@ def main(input_file, metadata_only, out, errors_file, no_cache):
           continue
 
       if metadata_only:
-        logger.info("Download complete")
         continue
 
       download_url = meta["data"].get("hdplay") or meta["data"].get("play")
@@ -121,8 +114,6 @@ def main(input_file, metadata_only, out, errors_file, no_cache):
         download_gallery_post(id, meta, out, logger)
       else:
         download_video_post(id, meta, out, logger)
-
-      logger.info("Download complete")
 
   logger.info("Finished")
 
@@ -144,7 +135,11 @@ def download_gallery_post(id, meta, out_path: Path, logger):
     logger.debug("Audio exists")
   else:
     logger.debug("Downloading audio")
-    subprocess.run(["wget", "--no-verbose", "-O", str(mp3_path), download_url])
+
+    resp = requests.get(download_url, stream=True)
+    with open(mp3_path, "wb") as out_file:
+      for chunk in resp.iter_content(chunk_size=8192):
+        out_file.write(chunk)
 
   for image_url in meta["data"]["images"]:
     image_name = Path(urlparse(image_url).path).name
@@ -154,7 +149,11 @@ def download_gallery_post(id, meta, out_path: Path, logger):
       logger.debug("Image exists")
     else:
       logger.debug("Downloading image")
-      subprocess.run(["wget", "--no-verbose", "-O", str(image_path), image_url])
+
+      resp = requests.get(download_url, stream=True)
+      with open(image_path, "wb") as out_file:
+        for chunk in resp.iter_content(chunk_size=8192):
+          out_file.write(chunk)
 
 
 def download_video_post(id, meta, out_path: Path, logger):
@@ -165,7 +164,11 @@ def download_video_post(id, meta, out_path: Path, logger):
     logger.debug("Video exists")
   else:
     logger.debug("Downloading video")
-    subprocess.run(["wget", "--no-verbose", "-O", str(mp4_path), download_url])
+
+    resp = requests.get(download_url, stream=True)
+    with open(mp4_path, "wb") as out_file:
+      for chunk in resp.iter_content(chunk_size=8192):
+        out_file.write(chunk)
 
 
 def write_error_url(url, errors_file):

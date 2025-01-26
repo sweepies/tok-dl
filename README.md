@@ -38,4 +38,3 @@ Options:
 
 ## Limitations
 - Since Tok-DL utilizes the [TiKWM](https://www.tikwm.com/) API, there is a limit of 5,000 requests per day, and 1 per second. Tok-DL automatically handles this on a second-by-second basis, but you will begin seeing errors if you hit the daily limit. Thankfully, you can easily pick up where you left off by feeding `errors.log` back in to Tok-DL as an input file.
-- Requires `wget`. WSL is recommended if using on Windows.
