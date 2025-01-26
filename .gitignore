@@ -5,3 +5,5 @@ tiktok
 .tiktok_cache
 likes.txt
 dist
+*.egg-info
+.env
