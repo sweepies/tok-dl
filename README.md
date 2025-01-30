@@ -11,9 +11,9 @@
 - Caches already-downloaded and unavailable posts to avoid fetching them again
 
 ## Installation
-via [mise](https://mise.jdx.dev) (recommended)
+via [mise](https://mise.jdx.dev) with [ubi](https://github.com/houseabsolute/ubi) (recommended):
 ```shell
-mise use -g go:github.com/sweepies/tok-dl
+mise use -g ubi:sweepies/tok-dl
 ```
 
 ## Usage
