@@ -10,5 +10,6 @@
         "workbench.colorTheme": "Monokai"
       }
     }
-  }
+  },
+  "postStartCommand": "curl https://mise.run | sh"
 }

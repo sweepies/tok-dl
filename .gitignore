@@ -51,3 +51,4 @@ go.work
 .tiktok_cache.db
 tiktok/
 build/
+dist/

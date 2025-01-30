@@ -1,0 +1,6 @@
+[env]
+_.file = ".env"
+
+[tools]
+go = "1.23"
+goreleaser = "latest"
