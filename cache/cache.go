@@ -18,17 +18,21 @@ type Cache struct {
 	db *bbolt.DB
 }
 
-func New() *Cache {
-	cachePath, err := os.UserCacheDir()
+func New(cacheDir string) *Cache {
+	if cacheDir == "" {
+		var err error
 
-	if err != nil {
-		cachePath, err = os.Getwd()
+		cacheDir, err = os.UserCacheDir()
+
 		if err != nil {
-			panic(err)
+			cacheDir, err = os.Getwd()
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 
-	db, err := bbolt.Open(path.Join(cachePath, fileName), 0600, nil)
+	db, err := bbolt.Open(path.Join(cacheDir, fileName), 0600, nil)
 
 	if err != nil {
 		panic(err)
