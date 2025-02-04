@@ -39,8 +39,8 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - sweepies/tok-dl:latest
-      - sweepies/tok-dl:{{ .Version }}
+      - ghcr.io/sweepies/tok-dl:latest
+      - ghcr.io/sweepies/tok-dl:{{ .Version }}
     skip_push: auto
     build_flag_templates:
       - "--pull"
@@ -56,8 +56,8 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - sweepies/tok-dl:latest-arm64
-      - sweepies/tok-dl:{{ .Version }}-arm64
+      - ghcr.io/sweepies/tok-dl:latest-arm64
+      - ghcr.io/sweepies/tok-dl:{{ .Version }}-arm64
     skip_push: auto
     build_flag_templates:
       - "--pull"
