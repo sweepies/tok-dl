@@ -25,7 +25,7 @@ docker run --rm -u "$(id -u):$(id -g)" -v "$(pwd):$(pwd)" -w "$(pwd)" ghcr.io/sw
 ## Usage
 Tok-DL takes input in the form of newline-separated links. This format is the same as is contained in TikTok personal data downloads. It will ignore commented lines.
 
-```shell
+```
 NAME:
    tok-dl - A TikTok Downloader that actually works
 
