@@ -66,7 +66,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "metadata-only", Aliases: []string{"m"}, Usage: "only download metadata", Destination: &metadataOnly},
 			&cli.StringFlag{Name: "out-dir", Aliases: []string{"o"}, Usage: "output directory", Value: "./tiktok", Destination: &outDir},
-			&cli.BoolFlag{Name: "no-cache", Usage: "bypass the cache; don't skip alreadty actioned urls", Destination: &noCache},
+			&cli.BoolFlag{Name: "no-cache", Usage: "bypass the cache; don't skip already actioned urls", Destination: &noCache},
 			&cli.StringFlag{Name: "cache-dir", Usage: "directory for cache database", Destination: &cacheDir, DefaultText: "OS user cache dir"},
 			&cli.BoolFlag{Name: "debug", Usage: "show debug logs", Destination: &debug},
 		},
