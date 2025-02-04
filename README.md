@@ -29,9 +29,10 @@ USAGE:
 GLOBAL OPTIONS:
    --metadata-only, -m        only download metadata (default: false)
    --out-dir value, -o value  output directory (default: "./tiktok")
-   --no-cache                 bypass the cache; don't skip alreadty actioned urls (default: false)
+   --no-cache                 bypass the cache; don't skip already actioned urls (default: false)
+   --cache-dir value          directory for cache database (default: OS user cache dir)
    --debug                    show debug logs (default: false)
-   --help, -h                 show help                Show this message and exit.
+   --help, -h                 show help
 ```
 
 ## Limitations
