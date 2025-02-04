@@ -64,11 +64,11 @@ func main() {
 		Name:  "tok-dl",
 		Usage: "A TikTok Downloader that actually works",
 		Flags: []cli.Flag{
-			&cli.BoolFlag{Name: "metadata-only", Aliases: []string{"m"}, Usage: "only download metadata", Destination: &metadataOnly},
-			&cli.StringFlag{Name: "out-dir", Aliases: []string{"o"}, Usage: "output directory", Value: "./tiktok", Destination: &outDir},
-			&cli.BoolFlag{Name: "no-cache", Usage: "bypass the cache; don't skip already actioned urls", Destination: &noCache},
-			&cli.StringFlag{Name: "cache-dir", Usage: "directory for cache database", Destination: &cacheDir, DefaultText: "OS user cache dir"},
-			&cli.BoolFlag{Name: "debug", Usage: "show debug logs", Destination: &debug},
+			&cli.BoolFlag{Name: "metadata-only", Aliases: []string{"m"}, Usage: "only download metadata", Destination: &metadataOnly, Sources: cli.EnvVars("TOKDL_METADATA_ONLY")},
+			&cli.StringFlag{Name: "out-dir", Aliases: []string{"o"}, Usage: "output directory", Value: "./tiktok", Destination: &outDir, Sources: cli.EnvVars("TOKDL_OUT_DIR")},
+			&cli.BoolFlag{Name: "no-cache", Usage: "bypass the cache; don't skip already actioned urls", Destination: &noCache, Sources: cli.EnvVars("TOKDL_NO_CACHE")},
+			&cli.StringFlag{Name: "cache-dir", Usage: "directory for cache database", Destination: &cacheDir, DefaultText: "OS user cache dir", Sources: cli.EnvVars("TOKDL_CACHE_DIR")},
+			&cli.BoolFlag{Name: "debug", Usage: "show debug logs", Destination: &debug, Sources: cli.EnvVars("TOKDL_DEBUG")},
 		},
 		ArgsUsage: "INPUT_FILE",
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
