@@ -32,9 +32,46 @@ archives:
         formats:
           - zip
 
+dockers:
+  - id: amd64
+    ids:
+      - tok-dl
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - sweepies/tok-dl:latest
+      - sweepies/tok-dl:{{ .Version }}
+    skip_push: auto
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
+
+  - id: arm64
+    ids:
+      - tok-dl
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - sweepies/tok-dl:latest-arm64
+      - sweepies/tok-dl:{{ .Version }}-arm64
+    skip_push: auto
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/arm64"
+
 changelog:
   sort: asc
   filters:
     exclude:
       - "^docs:"
       - "^test:"
+      - "^ops:"
+      - "^style:"

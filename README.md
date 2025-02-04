@@ -11,9 +11,15 @@
 - Caches already-downloaded and unavailable posts to avoid fetching them again
 
 ## Installation
-via [mise](https://mise.jdx.dev) with [ubi](https://github.com/houseabsolute/ubi) (recommended):
+### Cross platform
+via [mise](https://mise.jdx.dev) (recommended):
 ```shell
 mise use -g ubi:sweepies/tok-dl
+```
+
+Run in Docker:
+```shell
+docker run --rm -u "$(id -u):$(id -g)" -v "$(pwd):$(pwd)" -w "$(pwd)" ghcr.io/sweepies/tok-dl
 ```
 
 ## Usage
