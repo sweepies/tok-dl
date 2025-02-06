@@ -2,20 +2,16 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"mime"
-	"net/http"
 	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 
-	_cache "github.com/sweepies/tok-dl/cache"
+	"github.com/sweepies/tok-dl/db"
+	"github.com/sweepies/tok-dl/downloader"
 	"github.com/sweepies/tok-dl/tikwm"
 	"github.com/sweepies/tok-dl/util"
 
@@ -26,26 +22,19 @@ import (
 var (
 	metadataOnly bool
 	outDir       string
-	noCache      bool
 	inFile       string
 	debug        bool
-	cacheDir     string
+	dbDir        string
 
-	log   *charmLog.Logger
-	cache *_cache.Cache
+	log      *charmLog.Logger
+	database *db.Database
 
-	urls []string
-
-	mimeExts = map[string]string{
-		"video/mp4":  ".mp4",
-		"audio/mpeg": ".mp3",
-		"audio/mp3":  ".mp3",
-	}
+	// Compile these once
+	commentRegex = regexp.MustCompile("^(#|//|--)")
 )
 
-func configure() {
+func configure() error {
 	level := charmLog.InfoLevel
-
 	if debug {
 		level = charmLog.DebugLevel
 	}
@@ -56,7 +45,103 @@ func configure() {
 		Level:           level,
 	})
 
-	cache = _cache.New(cacheDir)
+	if dbDir == "" {
+		var err error
+		dbDir, err = os.UserCacheDir()
+		if err != nil {
+			dbDir, err = os.Getwd()
+			if err != nil {
+				return fmt.Errorf("could not determine database directory: %w", err)
+			}
+		}
+	}
+
+	var err error
+	database, err = db.New(dbDir)
+	if err != nil {
+		return fmt.Errorf("could not initialize database: %w", err)
+	}
+
+	return nil
+}
+
+// processInputFile reads URLs from a file, handling comments and empty lines
+func processInputFile(filename string) ([]string, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("error reading input file: %w", err)
+	}
+
+	var urls []string
+	lines := strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || commentRegex.MatchString(line) {
+			continue
+		}
+
+		if _, err := url.ParseRequestURI(line); err != nil {
+			log.Warn("Skipping invalid URL", "url", line)
+			continue
+		}
+
+		urls = append(urls, line)
+	}
+
+	return urls, nil
+}
+
+// downloadPost handles downloading a single TikTok post
+func downloadPost(url string, api *tikwm.Client, dl *downloader.MediaDownloader) error {
+	data, err := api.FetchMetadata(url)
+	if err != nil {
+		if errors.Is(err, tikwm.ErrRateLimit) {
+			return fmt.Errorf("rate limit exceeded, stopping: %w", err)
+		}
+		return fmt.Errorf("API error: %w", err)
+	}
+
+	if !metadataOnly {
+		dirPath := path.Join(outDir, data.Data.ID)
+		if err := os.MkdirAll(dirPath, 0700); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
+		}
+
+		// Determine what to download
+		var mediaURLs []string
+		if len(data.Data.Images) > 0 {
+			mediaURLs = data.Data.Images
+		} else {
+			downloadURL := util.StringNotEmptyCoalesce(data.Data.Hdplay, data.Data.Play, data.Data.Wmplay)
+			if downloadURL != "" {
+				mediaURLs = []string{downloadURL}
+			}
+		}
+
+		// Verify we have media URLs
+		if len(mediaURLs) == 0 {
+			if err := database.MarkFailed(url, db.StatusNoMedia); err != nil {
+				log.Error("Failed to mark as no media", "err", err)
+			}
+			return fmt.Errorf("no media URLs found in response")
+		}
+
+		// Download the media
+		if err := dl.DownloadMedia(mediaURLs, dirPath); err != nil {
+			if err := database.MarkFailed(url, db.StatusDownloadFailed); err != nil {
+				log.Error("Failed to mark download as failed", "err", err)
+			}
+			return fmt.Errorf("download failed: %w", err)
+		}
+	}
+
+	if err := database.MarkComplete(url); err != nil {
+		log.Error("Failed to mark as complete", "err", err)
+	}
+	
+	log.Info("Post processed", "id", data.Data.ID)
+	return nil
 }
 
 func main() {
@@ -66,135 +151,52 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "metadata-only", Aliases: []string{"m"}, Usage: "only download metadata", Destination: &metadataOnly, Sources: cli.EnvVars("TOKDL_METADATA_ONLY")},
 			&cli.StringFlag{Name: "out-dir", Aliases: []string{"o"}, Usage: "output directory", Value: "./tiktok", Destination: &outDir, Sources: cli.EnvVars("TOKDL_OUT_DIR")},
-			&cli.BoolFlag{Name: "no-cache", Usage: "bypass the cache; don't skip already actioned urls", Destination: &noCache, Sources: cli.EnvVars("TOKDL_NO_CACHE")},
-			&cli.StringFlag{Name: "cache-dir", Usage: "directory for cache database", Destination: &cacheDir, DefaultText: "OS user cache dir", Sources: cli.EnvVars("TOKDL_CACHE_DIR")},
+			&cli.StringFlag{Name: "db-dir", Usage: "directory for SQLite database", Destination: &dbDir, DefaultText: "OS user cache dir", Sources: cli.EnvVars("TOKDL_DB_DIR")},
 			&cli.BoolFlag{Name: "debug", Usage: "show debug logs", Destination: &debug, Sources: cli.EnvVars("TOKDL_DEBUG")},
 		},
 		ArgsUsage: "INPUT_FILE",
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-			configure()
+			if err := configure(); err != nil {
+				return ctx, err
+			}
 			return ctx, nil
 		},
+		After: func(ctx context.Context, cmd *cli.Command) error {
+			if database != nil {
+				return database.Close()
+			}
+			return nil
+		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-
 			inFile = cmd.Args().First()
-
-			// check if input file is provided
-			if len(inFile) == 0 {
+			if inFile == "" {
 				cli.ShowAppHelpAndExit(cmd, 1)
 			}
 
-			// read input file
-			data, err := os.ReadFile(inFile)
+			urls, err := processInputFile(inFile)
 			if err != nil {
-				log.Fatal("Error opening input file", "err", err.Error())
+				log.Fatal("Failed to process input file", "err", err)
 			}
-
-			// split by newline, handle carriage returns
-			lines := strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")
-
-			for _, line := range lines {
-				// skip empty lines
-				if len(line) == 0 {
-					continue
-				}
-
-				// ignore comments
-				exp := regexp.MustCompile("^(#|//|--)")
-				if exp.FindStringIndex(line) != nil {
-					continue
-				}
-
-				// skip invalid urls
-				_, err := url.ParseRequestURI(line)
-				if err != nil {
-					continue
-				}
-
-				urls = append(urls, line)
-			}
-
 			log.Info("File loaded", "urls", len(urls))
 
-			err = os.MkdirAll(outDir, 0700)
-
-			if err != nil {
-				log.Fatal("Could not create directory", "dir", outDir, "err", err.Error())
+			if err := os.MkdirAll(outDir, 0700); err != nil {
+				log.Fatal("Could not create output directory", "dir", outDir, "err", err)
 			}
 
-			caller := tikwm.New(cache, log)
+			api := tikwm.New(database, log)
+			defer api.Close()
+
+			dl := downloader.NewMediaDownloader()
+			defer dl.Close()
 
 			for _, url := range urls {
-				if !noCache && string(cache.Get([]byte(url))) != "" {
-					log.Debug("URL was found in cache; skipping", "url", url)
-					continue
-				}
-
-				data, err := caller.FetchMetadata(url)
-
-				if err != nil {
+				if err := downloadPost(url, api, dl); err != nil {
 					if errors.Is(err, tikwm.ErrRateLimit) {
-						log.Fatal("Exiting", "err", err.Error())
+						log.Fatal(err) // Rate limit means we should stop
 					}
-
-					log.Warn("Error from API", "err", err.Error(), "url", url)
-					cache.Set([]byte(url), []byte(err.Error()))
-
+					log.Warn("Failed to process post", "url", url, "err", err)
 					continue
 				}
-
-				dirPath := path.Join(outDir, data.Data.ID)
-				err = os.MkdirAll(dirPath, 0700)
-
-				if err != nil {
-					log.Fatal("Could not create directory", "dir", dirPath, "err", err.Error())
-				}
-
-				filePath := path.Join(dirPath, fmt.Sprintf("%s.json", data.Data.ID))
-
-				file, err := os.Create(filePath)
-				if err != nil {
-					log.Fatal("Could not open file", "file", filePath, "err", err.Error())
-				}
-
-				encoder := json.NewEncoder(file)
-				encoder.SetIndent("", " ")
-				encoder.Encode(data.Data)
-				file.Close()
-
-				// download files
-				if len(data.Data.Images) > 0 {
-
-					var imageErrs []error
-					for _, image := range data.Data.Images {
-						err := downloadFileInferExt(image, dirPath)
-
-						if err != nil {
-							log.Warn("Error downloading image", "err", err.Error())
-							imageErrs = append(imageErrs, err)
-						}
-					}
-					if len(imageErrs) > 0 {
-						log.Warn("Download incomplete", "id", data.Data.ID)
-						cache.Set([]byte(url), []byte("image(s) had errs"))
-					}
-				} else {
-					downloadUrl := util.StringNotEmptyCoalesce(data.Data.Hdplay, data.Data.Play, data.Data.Wmplay)
-
-					err := downloadFileInferExt(downloadUrl, dirPath)
-
-					if err != nil {
-						log.Warn("Error downloading video", "err", err.Error())
-						cache.Set([]byte(url), []byte(err.Error()))
-
-						continue
-					}
-
-				}
-
-				// finished
-				log.Info("Download finished", "id", data.Data.ID)
-				cache.Set([]byte(url), []byte("satisfied"))
 			}
 
 			log.Info("Finished")
@@ -205,46 +207,4 @@ func main() {
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func downloadFileInferExt(downloadUrl string, destDir string) error {
-	resp, err := http.Get(downloadUrl)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		return errors.New(resp.Status)
-	}
-
-	parsedUrl, _ := url.Parse(downloadUrl)
-	fileName := util.SanitizeFileName(filepath.Base(parsedUrl.Path))
-
-	if filepath.Ext(fileName) == "" {
-		contentType := resp.Header.Get("Content-Type")
-
-		var ext string
-
-		if mimeExts[contentType] != "" {
-			ext = mimeExts[contentType]
-		} else {
-			exts, _ := mime.ExtensionsByType(contentType)
-			ext = exts[0]
-		}
-
-		fileName = fmt.Sprintf("%s%s", fileName, ext)
-	}
-
-	filePath := path.Join(destDir, fileName)
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		log.Fatal("Could not open file", "file", filePath)
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, resp.Body)
-
-	return err
 }

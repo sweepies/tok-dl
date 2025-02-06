@@ -1,24 +1,51 @@
 package tikwm
 
-type ApiResponse struct {
-	Code          int     `json:"code,omitempty"`
-	Msg           string  `json:"msg"`
-	ProcessedTime float64 `json:"processed_time,omitempty"`
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"strconv"
+)
+
+// ApiSuccessCode represents the API's success status where 0 means success
+type ApiSuccessCode struct {
+	value int
+}
+
+func (c ApiSuccessCode) Bool() bool {
+	return c.value == 0
+}
+
+func (c *ApiSuccessCode) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		return nil
+	}
+	i, err := strconv.Atoi(string(data))
+	if err != nil {
+		return err
+	}
+	c.value = i
+	return nil
+}
+
+type Response struct {
+	Code          ApiSuccessCode `json:"code"`
+	Msg           string         `json:"msg"`
+	ProcessedTime float64        `json:"processed_time"`
 	Data          struct {
-		ID             string `json:"id,omitempty"`
-		Region         string `json:"region,omitempty"`
-		Title          string `json:"title,omitempty"`
-		Cover          string `json:"cover,omitempty"`
-		AiDynamicCover string `json:"ai_dynamic_cover,omitempty"`
-		OriginCover    string `json:"origin_cover,omitempty"`
-		Duration       int    `json:"duration,omitempty"`
-		Play           string `json:"play,omitempty"`
-		Hdplay         string `json:"hdplay,omitempty"`
-		Wmplay         string `json:"wmplay,omitempty"`
-		Size           int    `json:"size,omitempty"`
-		WmSize         int    `json:"wm_size,omitempty"`
-		HdSize         int    `json:"hd_size,omitempty"`
-		Music          string `json:"music,omitempty"`
+		ID             string   `json:"id,omitempty"`
+		Region         string   `json:"region,omitempty"`
+		Title          string   `json:"title,omitempty"`
+		Cover          string   `json:"cover,omitempty"`
+		AiDynamicCover string   `json:"ai_dynamic_cover,omitempty"`
+		OriginCover    string   `json:"origin_cover,omitempty"`
+		Duration       int      `json:"duration,omitempty"`
+		Play           string   `json:"play,omitempty"`
+		Hdplay         string   `json:"hdplay,omitempty"`
+		Wmplay         string   `json:"wmplay,omitempty"`
+		Size           int      `json:"size,omitempty"`
+		WmSize         int      `json:"wm_size,omitempty"`
+		HdSize         int      `json:"hd_size,omitempty"`
+		Music          string   `json:"music,omitempty"`
 		MusicInfo      struct {
 			ID       string `json:"id,omitempty"`
 			Title    string `json:"title,omitempty"`
@@ -71,15 +98,28 @@ type ApiResponse struct {
 			BrandedContentType     int  `json:"branded_content_type,omitempty"`
 			WithCommentFilterWords bool `json:"with_comment_filter_words,omitempty"`
 		} `json:"commerce_info,omitempty"`
-		CommercialVideoInfo string `json:"commercial_video_info,omitempty"`
-		ItemCommentSettings int    `json:"item_comment_settings,omitempty"`
-		MentionedUsers      string `json:"mentioned_users,omitempty"`
-		Author              struct {
+		CommercialVideoInfo  string   `json:"commercial_video_info,omitempty"`
+		ItemCommentSettings int       `json:"item_comment_settings,omitempty"`
+		MentionedUsers      string    `json:"mentioned_users,omitempty"`
+		Images              []string  `json:"images,omitempty"`
+		Author             struct {
 			ID       string `json:"id,omitempty"`
 			UniqueID string `json:"unique_id,omitempty"`
 			Nickname string `json:"nickname,omitempty"`
 			Avatar   string `json:"avatar,omitempty"`
 		} `json:"author,omitempty"`
-		Images []string `json:"images,omitempty"`
 	} `json:"data,omitempty"`
+}
+
+// For SQLite JSON storage
+func (r *Response) Value() (driver.Value, error) {
+	return json.Marshal(r)
+}
+
+func (r *Response) Scan(value interface{}) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return nil
+	}
+	return json.Unmarshal(b, &r)
 }
