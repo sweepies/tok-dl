@@ -5,13 +5,10 @@ go 1.23
 require (
 	github.com/charmbracelet/log v0.4.0
 	github.com/urfave/cli/v3 v3.0.0-beta1
-	go.etcd.io/bbolt v1.3.11
+	go.etcd.io/bbolt v1.4.0
 )
 
-require (
-	github.com/charmbracelet/x/ansi v0.2.3 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-)
+require github.com/charmbracelet/x/ansi v0.2.3 // indirect
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -23,5 +20,5 @@ require (
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
-	golang.org/x/sys v0.24.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 )
