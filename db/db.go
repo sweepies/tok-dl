@@ -8,11 +8,11 @@ import (
 	"path"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 const (
-	StatusComplete        = "complete"
+	StatusComplete       = "complete"
 	StatusRateLimited    = "rate_limited"
 	StatusParseFailed    = "parse_failed"
 	StatusUnknownError   = "unknown_error"
@@ -144,15 +144,15 @@ func normalizeURL(inputURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Remove any query parameters
 	parsed.RawQuery = ""
-	
+
 	// Ensure proper scheme
 	if parsed.Scheme == "" {
 		parsed.Scheme = "https"
 	}
-	
+
 	return parsed.String(), nil
 }
 
