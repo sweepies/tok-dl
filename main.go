@@ -6,6 +6,7 @@ import (
 
 	"github.com/sweepies/tok-dl/cmd"
 	internalContext "github.com/sweepies/tok-dl/internal/context"
+	"github.com/sweepies/tok-dl/internal/version"
 	"github.com/urfave/cli/v3"
 
 	charmLog "github.com/charmbracelet/log"
@@ -15,8 +16,9 @@ func main() {
 	var debug bool
 
 	app := &cli.Command{
-		Name:  "tok-dl",
-		Usage: "A TikTok Downloader that actually works",
+		Name:    "tok-dl",
+		Usage:   "A TikTok Downloader that actually works",
+		Version: version.Version,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:        "debug",
