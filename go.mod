@@ -5,7 +5,6 @@ go 1.23
 require (
 	github.com/charmbracelet/log v0.4.0
 	github.com/urfave/cli/v3 v3.0.0-beta1
-	go.etcd.io/bbolt v1.3.11
 	modernc.org/sqlite v1.35.0
 )
 
