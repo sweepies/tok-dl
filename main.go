@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path"
 	"regexp"
@@ -29,8 +29,7 @@ var (
 	log      *charmLog.Logger
 	database *db.Database
 
-	// Compile these once
-	commentRegex = regexp.MustCompile("^(#|//|--)")
+	tiktokURLRegex = regexp.MustCompile(`^https?:\/\/(?:(?:www|vm|vt|m)\.)?tiktokv?\.com\/.+$`)
 )
 
 func configure() error {
@@ -67,26 +66,30 @@ func configure() error {
 
 // processInputFile reads URLs from a file, handling comments and empty lines
 func processInputFile(filename string) ([]string, error) {
-	data, err := os.ReadFile(filename)
+	file, err := os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("error reading input file: %w", err)
+		return nil, fmt.Errorf("error opening input file: %w", err)
 	}
+	defer file.Close()
 
 	var urls []string
-	lines := strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")
+	scanner := bufio.NewScanner(file)
 
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" || commentRegex.MatchString(line) {
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		if line == "" {
 			continue
 		}
-
-		if _, err := url.ParseRequestURI(line); err != nil {
-			log.Warn("Skipping invalid URL", "url", line)
+		if !tiktokURLRegex.MatchString(line) {
 			continue
 		}
 
 		urls = append(urls, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading input file: %w", err)
 	}
 
 	return urls, nil
@@ -139,7 +142,7 @@ func downloadPost(url string, api *tikwm.Client, dl *downloader.MediaDownloader)
 	if err := database.MarkComplete(url); err != nil {
 		log.Error("Failed to mark as complete", "err", err)
 	}
-	
+
 	log.Info("Post processed", "id", data.Data.ID)
 	return nil
 }
