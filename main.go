@@ -42,6 +42,9 @@ func main() {
 		Commands: []*cli.Command{
 			cmd.NewDownloadCommand(),
 		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			return cli.ShowAppHelp(cmd)
+		},
 	}
 
 	if err := app.Run(context.Background(), os.Args); err != nil {
