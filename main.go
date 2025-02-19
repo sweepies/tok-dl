@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -32,7 +33,7 @@ var (
 	tiktokURLRegex = regexp.MustCompile(`^https?:\/\/(?:(?:www|vm|vt|m)\.)?tiktokv?\.com\/.+$`)
 )
 
-func configure() error {
+func configure() {
 	level := charmLog.InfoLevel
 	if debug {
 		level = charmLog.DebugLevel
@@ -43,25 +44,6 @@ func configure() error {
 		TimeFormat:      "15:04:05",
 		Level:           level,
 	})
-
-	if dbDir == "" {
-		var err error
-		dbDir, err = os.UserCacheDir()
-		if err != nil {
-			dbDir, err = os.Getwd()
-			if err != nil {
-				return fmt.Errorf("could not determine database directory: %w", err)
-			}
-		}
-	}
-
-	var err error
-	database, err = db.New(dbDir)
-	if err != nil {
-		return fmt.Errorf("could not initialize database: %w", err)
-	}
-
-	return nil
 }
 
 // processInputFile reads URLs from a file, handling comments and empty lines
@@ -95,6 +77,21 @@ func processInputFile(filename string) ([]string, error) {
 	return urls, nil
 }
 
+// saveMetadataFile writes the response data to a JSON file
+func saveMetadataFile(data *tikwm.Response, dirPath string) error {
+	jsonPath := path.Join(dirPath, "metadata.json")
+	jsonData, err := json.MarshalIndent(data.Data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	if err := os.WriteFile(jsonPath, jsonData, 0644); err != nil {
+		return fmt.Errorf("failed to write metadata file: %w", err)
+	}
+
+	return nil
+}
+
 // downloadPost handles downloading a single TikTok post
 func downloadPost(url string, api *tikwm.Client, dl *downloader.MediaDownloader) error {
 	data, err := api.FetchMetadata(url)
@@ -105,12 +102,18 @@ func downloadPost(url string, api *tikwm.Client, dl *downloader.MediaDownloader)
 		return fmt.Errorf("API error: %w", err)
 	}
 
-	if !metadataOnly {
-		dirPath := path.Join(outDir, data.Data.ID)
-		if err := os.MkdirAll(dirPath, 0700); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
-		}
+	// Create directory for the post
+	dirPath := path.Join(outDir, data.Data.ID)
+	if err := os.MkdirAll(dirPath, 0700); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", dirPath, err)
+	}
 
+	// Save metadata file
+	if err := saveMetadataFile(data, dirPath); err != nil {
+		log.Warn("Failed to save metadata file", "err", err)
+	}
+
+	if !metadataOnly {
 		// Determine what to download
 		var mediaURLs []string
 		if len(data.Data.Images) > 0 {
@@ -159,9 +162,7 @@ func main() {
 		},
 		ArgsUsage: "INPUT_FILE",
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-			if err := configure(); err != nil {
-				return ctx, err
-			}
+			configure()
 			return ctx, nil
 		},
 		After: func(ctx context.Context, cmd *cli.Command) error {
@@ -174,6 +175,23 @@ func main() {
 			inFile = cmd.Args().First()
 			if inFile == "" {
 				cli.ShowAppHelpAndExit(cmd, 1)
+			}
+
+			if dbDir == "" {
+				var err error
+				dbDir, err = os.UserCacheDir()
+				if err != nil {
+					dbDir, err = os.Getwd()
+					if err != nil {
+						return fmt.Errorf("could not determine database directory: %w", err)
+					}
+				}
+			}
+
+			var err error
+			database, err = db.New(dbDir)
+			if err != nil {
+				return fmt.Errorf("could not initialize database: %w", err)
 			}
 
 			urls, err := processInputFile(inFile)
