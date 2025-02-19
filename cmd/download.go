@@ -84,7 +84,7 @@ func (c *downloadCommand) downloadPost(url string, api *tikwm.Client, dl *downlo
 	data, err := api.FetchMetadata(url)
 	if err != nil {
 		if errors.Is(err, tikwm.ErrRateLimit) {
-			return fmt.Errorf("rate limit exceeded, stopping: %w", err)
+			return err
 		}
 		return fmt.Errorf("API error: %w", err)
 	}
@@ -176,7 +176,7 @@ func (c *downloadCommand) execute(ctx context.Context, inputFile string) error {
 	for _, url := range urls {
 		if err := c.downloadPost(url, api, dl); err != nil {
 			if errors.Is(err, tikwm.ErrRateLimit) {
-				c.log.Fatal(err) // Rate limit means we should stop
+				c.log.Fatal("Rate limit exceeded") // Rate limit means we should stop
 			}
 			c.log.Warn("Failed to process post", "url", url, "err", err)
 			continue
